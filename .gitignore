@@ -43,6 +43,7 @@ storage/full-reports/
 storage/trading-view-pine-editor/
 storage/genetics/
 storage/logs/*
+!storage/logs/
 !storage/logs/.gitkeep
 
 # Secrets
