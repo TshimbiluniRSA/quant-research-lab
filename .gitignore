@@ -19,6 +19,31 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+research/experiments/*
+!research/experiments/.gitkeep
+!research/experiments/EXPERIMENT_TEMPLATE.md
+research/reports/generated/
+logs/
+*.log
+
+# Jesse runtime output and local database state
+docker/postgres-data/
+storage/*.key
+storage/*.sqlite
+storage/*.gz
+storage/temp/
+storage/trades/
+storage/orders/
+storage/csv/
+storage/json/
+storage/charts/
+storage/backtest-charts/
+storage/significance-test-charts/
+storage/full-reports/
+storage/trading-view-pine-editor/
+storage/genetics/
+storage/logs/*
+!storage/logs/.gitkeep
 
 # Secrets
 .env
