@@ -2,23 +2,56 @@
 name = "quant-research-lab"
 version = "0.1.0"
 description = "Learning-first quantitative research laboratory built around notebooks, statistical validation, and Jesse."
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
-  "jupyterlab>=4.2",
-  "matplotlib>=3.9",
-  "numpy>=2.0",
-  "pandas>=2.2",
-  "scipy>=1.14",
+  "ipykernel>=6.29,<7",
+  "jesse==3.0.7",
+  "jupyterlab>=4.2,<5",
+  "matplotlib~=3.10.3",
+  "numpy~=1.26.4",
+  "pandas~=2.2.3",
+  "scipy~=1.15.0",
+  "statsmodels~=0.14.4",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.3",
-  "ruff>=0.6",
+  # Jesse 3.0.7 currently constrains pytest to the 6.2 line.
+  "mypy>=1.11,<2",
+  "pytest~=6.2.5",
+  "ruff>=0.6,<1",
 ]
 
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+analytics = ["py.typed"]
+
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+testpaths = ["tests"]
+filterwarnings = [
+  "ignore::DeprecationWarning:_pytest.assertion.rewrite",
+]
 
 [tool.ruff]
 line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_configs = true
+disallow_untyped_defs = true
+explicit_package_bases = true
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = "pandas"
+ignore_missing_imports = true

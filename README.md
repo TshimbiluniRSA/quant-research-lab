@@ -1,150 +1,195 @@
 # Quant Research Lab
 
-A learning-first quantitative research platform for testing market hypotheses, validating strategies statistically, and eventually paper-trading or live-trading only strategies that survive rigorous testing.
-
-## North star
-
-> Build a system capable of rejecting bad trading ideas quickly.
+A learning-first environment for testing falsifiable market hypotheses, understanding Jesse,
+and rejecting weak trading ideas before capital is considered.
 
 The project repeatedly asks:
 
 1. Is there a measurable market effect?
-2. Can that effect be turned into a tradeable strategy after realistic costs?
-3. Does it survive data it has never seen before?
+2. Can it become a tradable strategy after realistic costs?
+3. Does it survive genuinely unseen data?
 
-## Project philosophy
+A profitable backtest is not evidence by itself. No code in this repository is approved for
+live trading.
 
-This is not a "build a profitable bot" project. It is a reproducible research environment where notebooks, statistics, Jesse backtests, experiment tracking, and later AI-assisted research are used to test hypotheses systematically.
+## Current scope
 
-Research code and strategy code are intentionally separated. Notebooks are the research laboratory; Jesse is the strategy execution and backtesting engine.
+- **V0.1 — Jesse mechanics:** project structure, candles, routes, orders, example strategies,
+  fees, backtests, metrics, and trade inspection.
+- **V0.2 — research foundation:** Jupyter, pandas, returns, rolling volatility, forward returns,
+  data-quality checks, research templates, and utility tests.
 
-## Roadmap
+AI agents, MCP automation, optimization campaigns, ML, APIs, dashboards, paper execution, and
+live trading are deliberately out of scope.
 
-### V0.1 — Jesse mechanics
-- Install Jesse
-- Understand project structure
-- Import market data
-- Run example strategies
-- Learn routes, candles, orders, entries, exits, position sizing, stops, take-profit, fees and backtest outputs
+## Verified Jesse setup
 
-### V0.2 — Quant research foundation
-- Build the pandas/Jupyter research environment
-- Learn returns, rolling volatility, rolling windows and forward returns
-- Inspect distributions and candle quality
-- Create the hypothesis/experiment/report structure
+This setup was checked against Jesse's official documentation and release metadata on
+2026-09-09:
 
-### V0.3 — First hypothesis research
-- Start with AAPL 1-hour data
-- Research large-move continuation / mean-reversion behaviour
-- Do notebook analysis before writing a strategy
-- Write a research conclusion
+- Jesse supports Python 3.10–3.13; this project uses Python 3.12.
+- Docker is Jesse's recommended beginner setup because the application needs PostgreSQL and
+  Redis. A native `pip install jesse` remains possible when those services are installed.
+- The project template uses root-level `docker/`, `storage/`, and `strategies/`. This repository
+  preserves those conventions instead of wrapping Jesse in a custom directory.
+- Sensitive service configuration belongs in `.env`; application/backtest settings are managed
+  in the dashboard.
+- Jesse imports and stores 1-minute candles, then builds larger timeframes as needed.
+- The dashboard creates strategies under `strategies/<Name>/__init__.py` and runs backtests after
+  candles have been imported. The `jesse.research` API also supports notebook workflows.
 
-### V0.4 — Hypothesis to Jesse strategy
-- Implement the simplest strategy justified by the research
-- Run baseline backtests
-- Compare notebook expectations with actual execution
-- Inspect trades and backtest metrics
+References: [Getting Started](https://docs.jesse.trade/docs/getting-started/),
+[Docker](https://docs.jesse.trade/docs/getting-started/docker),
+[Configuration](https://docs.jesse.trade/docs/configuration),
+[Importing Candles](https://docs.jesse.trade/docs/import-candles),
+[Research API](https://docs.jesse.trade/docs/research/candles), and
+[Backtesting](https://docs.jesse.trade/docs/backtest/).
 
-### V0.5 — Validation framework
-- Train / validation / sealed-test separation
-- Parameter sensitivity
-- Walk-forward testing
-- Bootstrap and Monte Carlo analysis
-- Market-regime analysis
+### AAPL constraint
 
-### V0.6 — Multi-market research
-- AAPL
-- SPY
-- QQQ
-- Other equities
-- Later, crypto markets such as BTC-USDT and ETH-USDT
+Jesse's current official
+[supported backtest exchanges](https://docs.jesse.trade/docs/supported-exchanges/) are crypto
+exchanges. No native AAPL/equity candle importer was verified. The first AAPL hypothesis
+therefore remains data-source-neutral: do not choose dates or convert equity data for Jesse
+until provider coverage, licensing, market-session semantics, corporate-action adjustment, and
+required 1-minute history have been confirmed. BTC-USDT results cannot validate an AAPL
+hypothesis.
 
-### V0.7 — Experiment database
-- PostgreSQL-backed experiment tracking
-- Strategy versions and lineage
-- Metrics and decisions
+## Prerequisites on Windows + WSL2
 
-### V0.8 — AI research assistant
-- LLM-assisted hypothesis generation
-- Jesse MCP integration
-- Controlled experiment campaigns
-- Automated experiment reports
+Develop inside the Linux filesystem in WSL, not under `/mnt/c`, to avoid slow file I/O and
+permission surprises. Install:
 
-### V0.9 — Research dashboard
-- FastAPI
-- React + TypeScript
-- Experiment explorer
-- Equity curves, drawdowns and parameter views
+- WSL2 with a current Ubuntu distribution
+- Python 3.12 and its `venv` module
+- Docker Desktop with WSL integration, or Docker Engine inside WSL
+- GNU Make and Git
 
-### V1.0 — Paper trading
-- Live market data
-- Paper execution
-- Monitoring and alerts
+Confirm the tools from WSL:
 
-### V1.1 — Controlled live trading
-Only after a strategy survives the required research, validation and paper-trading stages.
+```bash
+python3.12 --version
+docker --version
+docker compose version
+```
 
-## Initial research question
+## Install the research environment
 
-A deliberately narrow first hypothesis:
+Dependencies have one declared source of truth: `pyproject.toml`. Jesse 3.0.7 is pinned, and
+scientific-library constraints match that release.
 
-> After unusually strong hourly price moves in AAPL, does price tend to continue moving in the same direction during the following 1–4 hours?
+```bash
+make setup
+```
 
-The goal is not to assume the answer. The goal is to measure it, test its statistical significance, and reject it if the evidence is weak.
+This creates `.venv`, installs the project with development tools, and registers the
+`Quant Research Lab` Jupyter kernel. Activate it manually when desired:
+
+```bash
+source .venv/bin/activate
+```
+
+## Start Jesse
+
+Create a local configuration and change both placeholder passwords to the same strong local
+values before the first start:
+
+```bash
+cp .env.example .env
+make jesse-up
+make jesse-logs
+```
+
+Open <http://localhost:9000>. The Compose stack uses the official Jesse 3.0.7 image plus local
+PostgreSQL and Redis services. It intentionally runs `jesse run` without installing the live
+plugin. Database files stay under ignored `docker/postgres-data/`. For optional host-side Jesse
+research calls, Compose exposes PostgreSQL only on `127.0.0.1:5434` and Redis only on
+`127.0.0.1:6380`, avoiding common local service ports.
+
+Stop the stack with:
+
+```bash
+make jesse-down
+```
+
+## Import candles and run a sample backtest
+
+1. Start Jesse and open its dashboard.
+2. Open **Import Candles**.
+3. For a small mechanical test, select a supported exchange such as `Binance Spot`, choose
+   `BTC-USDT`, and choose a modest start date. Jesse imports through the present; availability
+   depends on the exchange.
+4. Open **Backtest**, create one route using `BTC-USDT`, `1h`, and one strategy from
+   `strategies/`.
+5. Choose only a range covered by imported candles. Configure an explicit starting balance and
+   realistic fee. Record the missing slippage assumption as a limitation if the selected Jesse
+   mode cannot model it directly.
+6. Run the backtest, then inspect orders, individual trades, drawdown, return distributions, and
+   benchmark—not only net profit or Sharpe ratio.
+
+`make backtest` starts the stack and prints the dashboard reminder. Candle download and backtest
+choices remain manual during the learning-first stages.
+
+## Start Jupyter
+
+```bash
+make notebook
+```
+
+Begin with `research/notebooks/000_jesse_data_basics.ipynb`. It expects a small user-supplied CSV
+at `data/raw/candles.csv` and explains the schema, or it can be adapted to candles already
+imported into Jesse. Run its cells yourself and inspect every output.
+
+`001_first_market_hypothesis.ipynb` is deliberately a skeleton. It contains no fabricated AAPL
+data, date split, result, or conclusion.
+
+## Quality commands
+
+```bash
+make test       # utility behavior
+make lint       # source, tests, and learning strategies
+make typecheck  # reusable source modules
+make check      # all three
+```
+
+Do not unit test Jesse internals. The project tests only its own transparent transformations.
+The test command disables unrelated third-party pytest plugins because Jesse 3.0.7 pins pytest
+6.2 while newer packages in its runtime dependency set expose plugins for newer pytest releases.
 
 ## Repository structure
 
 ```text
 quant-research-lab/
-├── README.md
-├── AGENTS.md
-├── pyproject.toml
-├── .env.example
+├── docker/                  # Jesse-native Compose stack
+├── storage/                 # ignored Jesse runtime outputs
+├── strategies/              # Jesse-native class-named strategy folders
 ├── research/
-│   ├── hypotheses/
-│   ├── notebooks/
-│   ├── experiments/
-│   └── reports/
-├── strategies/
-│   ├── baseline/
-│   ├── momentum/
-│   ├── mean_reversion/
-│   └── trend/
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── metadata/
-├── src/
-│   ├── analytics/
-│   ├── features/
-│   ├── validation/
-│   ├── risk/
-│   └── utils/
-└── tests/
+│   ├── hypotheses/          # falsifiable claims and template
+│   ├── notebooks/           # manual, educational analysis
+│   ├── experiments/         # reproducible run records
+│   └── reports/             # conclusions, limitations, and reviews
+├── data/                    # metadata plus ignored raw/processed data
+├── src/                     # reusable analytics/features/validation/risk/utils
+├── tests/                   # tests for our own code
+├── pyproject.toml           # Python dependency source of truth
+└── Makefile                 # readable local commands
 ```
 
-## Research workflow
+## Data separation
 
-```text
-Notebook research
-      ↓
-Understand market behaviour
-      ↓
-Write a falsifiable hypothesis
-      ↓
-Implement in Jesse
-      ↓
-Backtest with realistic costs
-      ↓
-Analyse results and individual trades
-      ↓
-Validate robustness
-      ↓
-Reject, revise, or promote to paper trading
-```
+The full policy is in [`research/DATA_SPLITTING.md`](research/DATA_SPLITTING.md).
 
-## Status
+- Research/training data is available during hypothesis development.
+- Validation data is accessed sparingly for documented comparisons and robustness checks.
+- Final-test data stays sealed until the hypothesis, implementation, parameters, costs, and
+  decision criteria are frozen.
 
-Current focus: **V0.1 and V0.2 only**.
+Never modify a strategy after seeing final-test results without creating a new research version
+and marking the old final test contaminated for that version.
 
-No live trading. No serious ML. No autonomous strategy generation until the manual research and validation workflow is understood first.
+## Current status and next step
+
+V0.1/V0.2 structure, commands, utilities, templates, notebook starters, and four small learning
+strategies are present. The next manual milestone is intentionally modest: install the local
+environment, start Jesse, import one supported dataset, inspect it in the first notebook, and run
+one example backtest. Do not optimize the result.

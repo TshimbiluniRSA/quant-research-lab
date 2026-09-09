@@ -46,3 +46,19 @@ When automated research is introduced later:
 ## Live trading
 
 Do not add or enable live-trading logic by default. Any future live deployment must include explicit risk limits, monitoring, failure handling, reconciliation and a deliberately small initial capital allocation.
+
+## Jesse-specific rules for V0.1 and V0.2
+
+- Preserve Jesse's native root-level `docker/`, `storage/`, and `strategies/` layout.
+- Put each runnable Jesse strategy in `strategies/<ClassName>/__init__.py`.
+- Treat the dashboard configuration, data source, date range, fee, slippage, exchange mode,
+  leverage, and strategy commit as part of every reproducible run record.
+- Jesse stores 1-minute candles and derives larger timeframes. Do not pass hourly candles to
+  `jesse.research.backtest()` as though they were native 1-minute input.
+- Use only documented Jesse candle columns: timestamp, open, close, high, low, volume.
+- Keep research labels such as forward returns out of strategy inputs to prevent look-ahead.
+- Do not assume equity support. Verify provider, license, timestamp semantics, adjustment rules,
+  and Jesse compatibility before using AAPL or another stock.
+- Do not enable or install the live-trading plugin during V0.1/V0.2.
+- Learning strategies must be simple, commented, unoptimized, and explicitly described as
+  educational examples rather than market-edge claims.
