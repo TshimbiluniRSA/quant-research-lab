@@ -66,8 +66,21 @@ def log_returns(close: pd.Series | Iterable[float]) -> pd.Series:
     return np.log(prices / prices.shift(1)).rename("log_return")
 
 
-def forward_returns(close: pd.Series | Iterable[float], periods: int = 1) -> pd.Series:
-    """Calculate the return from each row to ``periods`` rows in the future.
+def forward_returns(
+    close: pd.Series | Iterable[float],
+    periods: int = 1,
+    *,
+    freq: str | pd.Timedelta | None = None,
+) -> pd.Series:
+    """Calculate the return from each bar to ``periods`` bars in the future.
+
+    With a DatetimeIndex, ``freq`` is required and the horizon is measured in time: prices are
+    reindexed to a complete ``freq`` grid, so a missing candle yields NaN instead of silently
+    stretching the horizon. Timestamps that do not fall on the grid raise an error. Without a
+    DatetimeIndex, rows are assumed to be consecutive, evenly spaced bars.
+
+    The grid ends at the last timestamp supplied, so slicing to one data split before calling
+    this function leaves NaN wherever a label would need prices from the next split.
 
     This is a research label and must never be used as an input available to a strategy at
     that same timestamp.
@@ -75,7 +88,22 @@ def forward_returns(close: pd.Series | Iterable[float], periods: int = 1) -> pd.
     if periods < 1:
         raise ValueError("periods must be at least 1")
     prices = _as_float_series(close, name="close")
-    return (prices.shift(-periods) / prices - 1).rename(f"forward_return_{periods}")
+    name = f"forward_return_{periods}"
+
+    if not isinstance(prices.index, pd.DatetimeIndex) or prices.empty:
+        return (prices.shift(-periods) / prices - 1).rename(name)
+
+    if freq is None:
+        raise ValueError("freq is required for a DatetimeIndex so the horizon is measured in time")
+    if not prices.index.is_monotonic_increasing or prices.index.has_duplicates:
+        raise ValueError("timestamps must be sorted and unique")
+    grid = pd.date_range(prices.index[0], prices.index[-1], freq=freq)
+    off_grid = prices.index.difference(grid)
+    if len(off_grid) > 0:
+        raise ValueError(f"{len(off_grid)} timestamps do not fall on the {freq} grid")
+
+    future = prices.reindex(grid).shift(-periods).reindex(prices.index)
+    return (future / prices - 1).rename(name)
 
 
 def rolling_volatility(
