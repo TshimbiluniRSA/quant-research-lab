@@ -18,6 +18,24 @@ This repository is a quantitative research laboratory. Agents must prioritize re
 12. Risk management overrides strategy signals.
 13. Capital preservation matters more than return maximisation.
 
+## Core principles
+
+These extend the core rules above with where and when each obligation applies.
+
+1. **Falsifiability first** (extends rule 2). Write the hypothesis in `research/hypotheses/`
+   *before* any data is touched. "Let's see what the data shows" is not a hypothesis.
+2. **Split before analysis** (extends rules 1 and 9). Assign research/validation/final-test
+   boundaries per `research/DATA_SPLITTING.md` before analysis begins. Once a strategy has been
+   evaluated on final-test data it is **contaminated** for that version. No "just one more tweak."
+3. **Costs are part of the result** (extends rule 4). No result may be called "profitable" until
+   fees and (once modeled) slippage are included. A backtest without realistic costs is not a
+   result.
+4. **No trading approval by default** (extends rule 11). Nothing is cleared for paper or live
+   trading without a completed report in `research/reports/` documenting hypothesis → backtest →
+   cost-adjusted result → validation outcome.
+5. **Scope discipline.** ML, LLM agents, and optimization are out of scope until the
+   fundamentals stages below are complete. Adding them early defeats the purpose of the project.
+
 ## Research discipline
 
 - Ask why an experiment exists before running it.
@@ -32,6 +50,73 @@ This repository is a quantitative research laboratory. Agents must prioritize re
 ## Learning-first rule
 
 During V0.1–V0.5, manual understanding is a requirement. Do not automate away Jesse notebooks, statistical checks or trade inspection before the researcher understands what each step is doing.
+
+## Learning roadmap
+
+Stages are completed by the human researcher, in order. Agents must not skip a stage or declare
+one complete; only the researcher can say an exit criterion has been met.
+
+### Stage 1 — Market mechanics (hands-on, in-repo)
+
+- Run a simple strategy (e.g. `MovingAverageCrossover`) on BTC-USDT.
+- Read the raw trade log line by line: entry price, exit price, fee paid, slippage assumption,
+  PnL calculation.
+- **Exit criterion:** can explain, unaided, exactly how a single trade's PnL was computed, fees
+  included.
+
+### Stage 2 — Break it on purpose
+
+- Rerun with fees set to 0% and observe the distortion.
+- Rerun with unrealistically high fees and watch the strategy die.
+- **Exit criterion:** intuitive (not just intellectual) grasp of why "profitable in backtest" ≠
+  "profitable after costs."
+
+### Stage 3 — Returns and volatility (V0.2 scope)
+
+- Compute simple returns, log returns, and rolling volatility by hand in a notebook (not via an
+  unfamiliar library call).
+- Plot them; observe volatility clustering.
+- **Exit criterion:** can explain why log returns are used for compounding, and why volatility
+  isn't randomly distributed over time.
+
+### Stage 4 — Write one hypothesis, properly
+
+- Pick one specific, falsifiable idea (e.g. "returns show short-term mean reversion after a 2%+
+  single-candle move on 1h BTC-USDT").
+- Fill out `research/hypotheses/HYPOTHESIS_TEMPLATE.md` before touching data.
+- Assign research/validation/final-test boundaries upfront, per `research/DATA_SPLITTING.md`.
+
+### Stage 5 — Test it, cost-adjusted, and write the conclusion
+
+- Backtest on research/training data only.
+- Check against validation data.
+- Write the report in `research/reports/` even if the result is null.
+- **A documented null result is progress. An untested guess is not.**
+
+### Stage 6 (future, gated) — Risk and position sizing
+
+- Only after a validated edge exists: sizing (Kelly-adjacent), drawdown tolerance, correlation
+  handling across strategies.
+
+### Stage 7 (future, gated) — ML / LLM exploration
+
+- Only after at least one full Stage 1–5 cycle has been completed and documented. First question
+  at this stage: "would a better feature or a better cost model solve this instead of a bigger
+  model?"
+
+## Rules for AI agents
+
+These apply to Claude Code and any other tool reading this file, in addition to the rules above.
+
+- Do not write ML, optimization, parameter-search, paper-trading, or live-trading code unless
+  explicitly asked, even if it would "naturally" extend current work.
+- Do not skip or auto-complete a learning stage on the human's behalf. The point is for them to
+  do the analysis, not just receive the output.
+- If asked to re-tune a strategy after final-test results have been seen, flag the contamination
+  rather than silently complying.
+- Present no backtest result as meaningful without fees, and call out explicitly when slippage
+  is not modeled.
+- Prefer explaining *why* a number is what it is over just producing the number.
 
 ## AI experiment campaigns
 
@@ -62,3 +147,35 @@ Do not add or enable live-trading logic by default. Any future live deployment m
 - Do not enable or install the live-trading plugin during V0.1/V0.2.
 - Learning strategies must be simple, commented, unoptimized, and explicitly described as
   educational examples rather than market-edge claims.
+
+## Current status
+
+Verified against the repository on 2026-09-28. Update this section when the facts change.
+
+- **Strategies** (`strategies/`): four long-only, unoptimized learning examples:
+  `BuyAndHoldBaseline`, `MovingAverageCrossover` (SMA 20/50), `RsiMeanReversion`
+  (RSI 14, 30/50), `SimpleBreakout` (20-bar high / 10-bar low). None has been backtested in a
+  recorded experiment.
+- **Notebooks** (`research/notebooks/`): `000_jesse_data_basics.ipynb` is a complete starter
+  that has never been run (no outputs); it expects `data/raw/candles.csv`, which does not exist
+  yet. `001_first_market_hypothesis.ipynb` is a TODO skeleton for an AAPL hourly-continuation
+  question whose data provider is unconfirmed.
+- **Source and tests**: only `src/analytics/market_data.py` is implemented (OHLCV cleaning,
+  simple/log/forward returns, rolling volatility), covered by 7 tests in
+  `tests/test_market_data.py`. `src/features`, `src/risk`, `src/utils`, and `src/validation` are
+  empty placeholders. `make check` (ruff, mypy, pytest) passes locally.
+- **Templates**: `research/hypotheses/HYPOTHESIS_TEMPLATE.md`,
+  `research/experiments/EXPERIMENT_TEMPLATE.md` (multi-run research experiment),
+  `research/experiments/TEMPLATE.md` (single backtest run record, Stage 1–2), and
+  `research/reports/REPORT_TEMPLATE.md`.
+- **Research records**: no hypotheses written, no experiments recorded, and one report
+  (`AAPL_HOURLY_ANCHOR_TREND_REVIEW.md`, a code review of an external strategy, not a result).
+- **Data split**: BTC-USDT boundaries declared in `research/DATA_SPLITTING.md`: research
+  2019-01-01 → 2023-12-31, validation 2024, final test 2025-01-01 → 2026-06-30 (sealed).
+  Exchange, boundary convention, warm-up handling, and scope are still open decisions. No
+  candles have been committed or checked into `data/`.
+- **Roadmap progress**: Stage 1 not yet completed. No stage has been signed off by the
+  researcher.
+- **Known gaps**: slippage is **not modeled**. Address it before trusting any result on
+  less-liquid instruments. No CI is configured (`make check` is local only). Equity data (e.g.
+  AAPL) is intentionally not integrated; do not substitute crypto data for it.
