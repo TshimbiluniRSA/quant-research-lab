@@ -16,6 +16,7 @@ an edge. For multi-run hypothesis experiments, use `EXPERIMENT_TEMPLATE.md`.
 
 - Date range (start – end):
 - Data split this range belongs to: research/training | validation | final test
+- First and last candle timestamps observed in results:
 
 ## Cost and account assumptions
 

@@ -170,10 +170,11 @@ Verified against the repository on 2026-09-28. Update this section when the fact
   `research/reports/REPORT_TEMPLATE.md`.
 - **Research records**: no hypotheses written, no experiments recorded, and one report
   (`AAPL_HOURLY_ANCHOR_TREND_REVIEW.md`, a code review of an external strategy, not a result).
-- **Data split**: BTC-USDT boundaries declared in `research/DATA_SPLITTING.md`: research
-  2019-01-01 → 2023-12-31, validation 2024, final test 2025-01-01 → 2026-06-30 (sealed).
-  Exchange, boundary convention, warm-up handling, and scope are still open decisions. No
-  candles have been committed or checked into `data/`.
+- **Data split**: BTC-USDT boundaries declared in `research/DATA_SPLITTING.md` (Binance Spot;
+  half-open UTC intervals): research [2019-01-01, 2024-01-01), validation [2024-01-01,
+  2025-01-01), final test [2025-01-01, 2026-07-01) sealed for BTC on any exchange, 2026-07-01
+  onward reserved. One split shared by all BTC-USDT hypotheses; the final-test access log is
+  empty (never opened). No candles have been committed or checked into `data/`.
 - **Roadmap progress**: Stage 1 not yet completed. No stage has been signed off by the
   researcher.
 - **Known gaps**: slippage is **not modeled**. Address it before trusting any result on
