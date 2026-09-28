@@ -1,7 +1,9 @@
 # Data-splitting policy
 
-The calendar ranges remain unset until the chosen provider's coverage and data quality are
-verified. Assign every observation one role before strategy iteration begins.
+Calendar ranges are unset for each dataset until they are declared in a dataset section of this
+file; see [BTC-USDT boundaries](#btc-usdt-boundaries) for the first. A declared range stays
+pending until the chosen provider's coverage and data quality are verified. Assign every
+observation one role before strategy iteration begins.
 
 ## Research/training data
 

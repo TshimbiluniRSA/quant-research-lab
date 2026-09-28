@@ -161,8 +161,10 @@ Verified against the repository on 2026-09-28. Update this section when the fact
   yet. `001_first_market_hypothesis.ipynb` is a TODO skeleton for an AAPL hourly-continuation
   question whose data provider is unconfirmed.
 - **Source and tests**: only `src/analytics/market_data.py` is implemented (OHLCV cleaning,
-  simple/log/forward returns, rolling volatility), covered by 7 tests in
-  `tests/test_market_data.py`. `src/features`, `src/risk`, `src/utils`, and `src/validation` are
+  simple/log/forward returns, rolling volatility), covered by 14 tests in
+  `tests/test_market_data.py`. `simple_returns`, `log_returns`, and `forward_returns` require
+  `freq` for timestamped series and measure horizons in time: a missing candle yields NaN rather
+  than a return spanning the gap. `src/features`, `src/risk`, `src/utils`, and `src/validation` are
   empty placeholders. `make check` (ruff, mypy, pytest) passes locally.
 - **Templates**: `research/hypotheses/HYPOTHESIS_TEMPLATE.md`,
   `research/experiments/EXPERIMENT_TEMPLATE.md` (multi-run research experiment),
@@ -170,6 +172,8 @@ Verified against the repository on 2026-09-28. Update this section when the fact
   `research/reports/REPORT_TEMPLATE.md`.
 - **Research records**: no hypotheses written, no experiments recorded, and one report
   (`AAPL_HOURLY_ANCHOR_TREND_REVIEW.md`, a code review of an external strategy, not a result).
+  Markdown run records in `research/experiments/` are tracked by Git; other files there and
+  `research/experiments/generated/` are ignored.
 - **Data split**: BTC-USDT boundaries declared in `research/DATA_SPLITTING.md` (Binance Spot;
   half-open UTC intervals): research [2019-01-01, 2024-01-01), validation [2024-01-01,
   2025-01-01), final test [2025-01-01, 2026-07-01) sealed for BTC on any exchange, 2026-07-01

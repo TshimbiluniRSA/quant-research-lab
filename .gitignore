@@ -19,10 +19,12 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
-research/experiments/*
+# Experiments: track markdown run records only; every other file and generated/ stay local.
+research/experiments/**
+!research/experiments/**/
+!research/experiments/**/*.md
 !research/experiments/.gitkeep
-!research/experiments/EXPERIMENT_TEMPLATE.md
-!research/experiments/TEMPLATE.md
+research/experiments/generated/
 research/reports/generated/
 logs/
 *.log
