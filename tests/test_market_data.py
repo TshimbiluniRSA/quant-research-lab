@@ -26,6 +26,33 @@ def test_log_returns_reject_non_positive_prices() -> None:
         log_returns(pd.Series([100.0, 0.0]))
 
 
+def test_backward_returns_are_nan_after_a_missing_candle() -> None:
+    # The 02:00 candle is missing, so 03:00 has no one-bar-earlier price.
+    index = pd.to_datetime(
+        ["2023-06-01 00:00", "2023-06-01 01:00", "2023-06-01 03:00", "2023-06-01 04:00"], utc=True
+    )
+    close = pd.Series([100.0, 110.0, 121.0, 133.1], index=index)
+
+    simple = simple_returns(close, freq="1h")
+    log = log_returns(close, freq="1h")
+
+    assert simple.iloc[1] == pytest.approx(0.1)
+    assert np.isnan(simple.iloc[2])  # not 01:00 -> 03:00
+    assert simple.iloc[3] == pytest.approx(0.1)
+    assert log.iloc[1] == pytest.approx(np.log(1.1))
+    assert np.isnan(log.iloc[2])
+    assert log.iloc[3] == pytest.approx(np.log(1.1))
+
+
+def test_backward_returns_require_freq_for_timestamped_prices() -> None:
+    close = pd.Series([1.0, 2.0], index=pd.date_range("2023-01-01", periods=2, freq="1h"))
+
+    with pytest.raises(ValueError, match="freq is required"):
+        simple_returns(close)
+    with pytest.raises(ValueError, match="freq is required"):
+        log_returns(close)
+
+
 def test_forward_returns_align_the_future_result_to_the_current_row() -> None:
     result = forward_returns(pd.Series([100.0, 110.0, 121.0]), periods=2)
 

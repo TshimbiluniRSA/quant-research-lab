@@ -52,46 +52,18 @@ def _as_float_series(values: pd.Series | Iterable[float], *, name: str) -> pd.Se
     return series.astype(float).rename(name)
 
 
-def simple_returns(close: pd.Series | Iterable[float]) -> pd.Series:
-    """Calculate close-to-close arithmetic returns without filling missing observations."""
-    prices = _as_float_series(close, name="close")
-    return prices.pct_change(fill_method=None).rename("simple_return")
-
-
-def log_returns(close: pd.Series | Iterable[float]) -> pd.Series:
-    """Calculate close-to-close log returns; prices must be strictly positive."""
-    prices = _as_float_series(close, name="close")
-    if (prices.dropna() <= 0).any():
-        raise ValueError("Log returns require strictly positive prices.")
-    return np.log(prices / prices.shift(1)).rename("log_return")
-
-
-def forward_returns(
-    close: pd.Series | Iterable[float],
-    periods: int = 1,
-    *,
-    freq: str | pd.Timedelta | None = None,
+def _shift_bars(
+    prices: pd.Series, periods: int, freq: str | pd.Timedelta | None
 ) -> pd.Series:
-    """Calculate the return from each bar to ``periods`` bars in the future.
+    """Shift prices by ``periods`` bars, measured in time when the index holds timestamps.
 
-    With a DatetimeIndex, ``freq`` is required and the horizon is measured in time: prices are
-    reindexed to a complete ``freq`` grid, so a missing candle yields NaN instead of silently
-    stretching the horizon. Timestamps that do not fall on the grid raise an error. Without a
+    With a DatetimeIndex, ``freq`` is required: prices are reindexed to a complete ``freq`` grid
+    before shifting, so a missing candle yields NaN instead of silently pairing prices that are
+    further apart than one bar. Timestamps that do not fall on the grid raise an error. Without a
     DatetimeIndex, rows are assumed to be consecutive, evenly spaced bars.
-
-    The grid ends at the last timestamp supplied, so slicing to one data split before calling
-    this function leaves NaN wherever a label would need prices from the next split.
-
-    This is a research label and must never be used as an input available to a strategy at
-    that same timestamp.
     """
-    if periods < 1:
-        raise ValueError("periods must be at least 1")
-    prices = _as_float_series(close, name="close")
-    name = f"forward_return_{periods}"
-
     if not isinstance(prices.index, pd.DatetimeIndex) or prices.empty:
-        return (prices.shift(-periods) / prices - 1).rename(name)
+        return prices.shift(periods)
 
     if freq is None:
         raise ValueError("freq is required for a DatetimeIndex so the horizon is measured in time")
@@ -102,8 +74,57 @@ def forward_returns(
     if len(off_grid) > 0:
         raise ValueError(f"{len(off_grid)} timestamps do not fall on the {freq} grid")
 
-    future = prices.reindex(grid).shift(-periods).reindex(prices.index)
-    return (future / prices - 1).rename(name)
+    return prices.reindex(grid).shift(periods).reindex(prices.index)
+
+
+def simple_returns(
+    close: pd.Series | Iterable[float], *, freq: str | pd.Timedelta | None = None
+) -> pd.Series:
+    """Calculate close-to-close arithmetic returns without filling missing observations.
+
+    With a DatetimeIndex, ``freq`` is required and a bar whose previous candle is missing gets
+    NaN rather than a return spanning the gap (see ``_shift_bars``).
+    """
+    prices = _as_float_series(close, name="close")
+    return (prices / _shift_bars(prices, 1, freq) - 1).rename("simple_return")
+
+
+def log_returns(
+    close: pd.Series | Iterable[float], *, freq: str | pd.Timedelta | None = None
+) -> pd.Series:
+    """Calculate close-to-close log returns; prices must be strictly positive.
+
+    With a DatetimeIndex, ``freq`` is required and a bar whose previous candle is missing gets
+    NaN rather than a return spanning the gap (see ``_shift_bars``).
+    """
+    prices = _as_float_series(close, name="close")
+    if (prices.dropna() <= 0).any():
+        raise ValueError("Log returns require strictly positive prices.")
+    return np.log(prices / _shift_bars(prices, 1, freq)).rename("log_return")
+
+
+def forward_returns(
+    close: pd.Series | Iterable[float],
+    periods: int = 1,
+    *,
+    freq: str | pd.Timedelta | None = None,
+) -> pd.Series:
+    """Calculate the return from each bar to ``periods`` bars in the future.
+
+    With a DatetimeIndex, ``freq`` is required and the horizon is measured in time, so a missing
+    candle yields NaN instead of silently stretching the horizon (see ``_shift_bars``).
+
+    The grid ends at the last timestamp supplied, so slicing to one data split before calling
+    this function leaves NaN wherever a label would need prices from the next split.
+
+    This is a research label and must never be used as an input available to a strategy at
+    that same timestamp.
+    """
+    if periods < 1:
+        raise ValueError("periods must be at least 1")
+    prices = _as_float_series(close, name="close")
+    future = _shift_bars(prices, -periods, freq)
+    return (future / prices - 1).rename(f"forward_return_{periods}")
 
 
 def rolling_volatility(
