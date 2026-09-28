@@ -111,6 +111,21 @@ def test_rolling_volatility_uses_complete_windows() -> None:
     assert result.iloc[1] == pytest.approx(np.std([0.01, -0.01], ddof=1))
 
 
+def test_rolling_volatility_windows_never_span_a_missing_candle() -> None:
+    # The 03:00 candle is missing, so the 04:00 return is NaN and poisons every window over it.
+    index = pd.to_datetime(
+        [f"2023-06-01 {hour:02d}:00" for hour in (0, 1, 2, 4, 5, 6)], utc=True
+    )
+    close = pd.Series([100.0, 101.0, 99.0, 102.0, 104.0, 101.0], index=index)
+    returns = log_returns(close, freq="1h")
+
+    result = rolling_volatility(returns, window=2)
+
+    assert result.iloc[2] == pytest.approx(np.std(returns.iloc[1:3], ddof=1))  # 01:00-02:00
+    assert result.iloc[3:5].isna().all()  # 04:00 and 05:00 windows include the gap
+    assert result.iloc[5] == pytest.approx(np.std(returns.iloc[4:6], ddof=1))  # 05:00-06:00
+
+
 def test_clean_ohlcv_sorts_and_keeps_last_duplicate() -> None:
     candles = pd.DataFrame(
         {
