@@ -162,7 +162,7 @@ Verified against the repository on 2026-09-28. Update this section when the fact
   question whose data provider is unconfirmed.
 - **Source and tests**: only `src/analytics/market_data.py` is implemented (OHLCV cleaning,
   simple/log/forward returns, rolling volatility), covered by 14 tests in
-  `tests/test_market_data.py`. `simple_returns`, `log_returns`, and `forward_returns` require
+  `tests/test_market_data.py` (plus 2 in `tests/test_import_candles.py`). `simple_returns`, `log_returns`, and `forward_returns` require
   `freq` for timestamped series and measure horizons in time: a missing candle yields NaN rather
   than a return spanning the gap. `src/features`, `src/risk`, `src/utils`, and `src/validation` are
   empty placeholders. `make check` (ruff, mypy, pytest) passes locally.
@@ -181,6 +181,10 @@ Verified against the repository on 2026-09-28. Update this section when the fact
   empty (never opened). No candles have been committed or checked into `data/`.
 - **Roadmap progress**: Stage 1 not yet completed. No stage has been signed off by the
   researcher.
+- **Candle import**: `make import-candles START=YYYY-MM-DD` runs `scripts/import_candles.py`
+  in the Jesse container. It fills Binance outages flat at the previous close instead of
+  stopping or using the reopening price; the 22 filled gaps are listed in
+  `data/metadata/binance_spot_btcusdt_1m_gaps.md`.
 - **Known gaps**: slippage is **not modeled**. Address it before trusting any result on
   less-liquid instruments. No CI is configured (`make check` is local only). Equity data (e.g.
   AAPL) is intentionally not integrated; do not substitute crypto data for it.

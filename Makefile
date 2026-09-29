@@ -2,7 +2,7 @@ PYTHON := .venv/bin/python
 PIP := .venv/bin/pip
 JUPYTER := .venv/bin/jupyter
 
-.PHONY: setup jesse-up jesse-down jesse-logs backtest notebook test lint typecheck check
+.PHONY: setup jesse-up jesse-down jesse-logs import-candles backtest notebook test lint typecheck check
 
 setup:
 	python3.12 -m venv .venv
@@ -20,6 +20,10 @@ jesse-down:
 jesse-logs:
 	docker compose --env-file .env -f docker/docker-compose.yml logs -f jesse
 
+import-candles:
+	@test -n "$(START)" || (echo "Usage: make import-candles START=YYYY-MM-DD"; exit 1)
+	docker compose --env-file .env -f docker/docker-compose.yml exec jesse python scripts/import_candles.py --start $(START)
+
 backtest: jesse-up
 	@echo "Open http://localhost:9000, import candles, then use the Backtest page."
 
@@ -30,7 +34,7 @@ test:
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 $(PYTHON) -m pytest
 
 lint:
-	$(PYTHON) -m ruff check src tests strategies
+	$(PYTHON) -m ruff check src tests strategies scripts
 
 typecheck:
 	$(PYTHON) -m mypy src
