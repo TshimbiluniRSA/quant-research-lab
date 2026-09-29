@@ -1,11 +1,21 @@
 """Transparent market-data transformations used by the learning notebooks."""
 
+import re
 from collections.abc import Iterable
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 OHLCV_COLUMNS = ("open", "high", "low", "close", "volume")
+ONE_MINUTE = pd.Timedelta(minutes=1)
+
+# A data row of the gap table in data/metadata/*_1m_gaps.md:
+# | # | Split | First missing | Last missing | Minutes |
+_GAP_ROW = re.compile(
+    r"^\|\s*\d+\s*\|[^|]*\|\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\s*\|"
+    r"\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\s*\|\s*(\d+)\s*\|\s*$"
+)
 
 
 def clean_ohlcv(
@@ -45,6 +55,68 @@ def clean_ohlcv(
     cleaned = cleaned.sort_index()
     cleaned = cleaned.loc[~cleaned.index.duplicated(keep=duplicate_keep)]
     return cleaned.loc[:, list(OHLCV_COLUMNS)]
+
+
+def load_gap_windows(path: str | Path) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
+    """Read ``(first_missing, last_missing)`` UTC minutes from a documented 1m gap table.
+
+    Each row's minute count must equal its inclusive window length, so a typo in the source of
+    truth fails loudly instead of silently keeping or dropping the wrong minutes.
+    """
+    windows = []
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        match = _GAP_ROW.match(line.strip())
+        if match is None:
+            continue
+        first = pd.Timestamp(match.group(1), tz="UTC")
+        last = pd.Timestamp(match.group(2), tz="UTC")
+        expected = int(match.group(3))
+        if (last - first) // ONE_MINUTE + 1 != expected:
+            raise ValueError(f"Gap {first} to {last} does not span {expected} minutes.")
+        windows.append((first, last))
+    if not windows:
+        raise ValueError(f"No gap rows found in {path}.")
+    return windows
+
+
+def drop_synthetic_minutes(
+    candles: pd.DataFrame, gaps: Iterable[tuple[pd.Timestamp, pd.Timestamp]]
+) -> pd.DataFrame:
+    """Remove 1m candles whose open time falls inside a documented exchange gap.
+
+    Jesse fills exchange outages with flat, zero-volume candles, so data loaded from Jesse has
+    no missing timestamps and gap-aware functions cannot see the outage. Removing those minutes
+    restores the gaps. The windows are the source of truth rather than a ``volume == 0`` test,
+    because real minutes with no trades also exist. Windows are inclusive at both ends.
+    """
+    if not isinstance(candles.index, pd.DatetimeIndex) or candles.index.tz is None:
+        raise ValueError("candles need a timezone-aware DatetimeIndex; use clean_ohlcv first")
+    synthetic = np.zeros(len(candles), dtype=bool)
+    for first, last in gaps:
+        synthetic |= (candles.index >= first) & (candles.index <= last)
+    return candles.loc[~synthetic].copy()
+
+
+def resample_ohlcv(candles: pd.DataFrame, freq: str | pd.Timedelta) -> pd.DataFrame:
+    """Aggregate 1m candles into ``freq`` bars, keeping only bars with every minute present.
+
+    Bars are labelled by their open time, matching Jesse. A bar missing any minute, whether
+    removed as synthetic or never recorded, is dropped rather than built from partial data:
+    its range, volume, and close time would not describe a full bar. Freq-aware return
+    functions then yield NaN for returns that would span it.
+    """
+    if not isinstance(candles.index, pd.DatetimeIndex):
+        raise ValueError("candles need a DatetimeIndex; use clean_ohlcv first")
+    if (candles.index != candles.index.floor(ONE_MINUTE)).any():
+        raise ValueError("resample_ohlcv expects 1m candles on whole-minute timestamps")
+
+    minutes_per_bar = pd.Timedelta(freq) // ONE_MINUTE
+    grouped = candles.resample(freq, label="left", closed="left")
+    bars = grouped.agg(
+        {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+    )
+    complete = grouped["close"].count() == minutes_per_bar
+    return bars.loc[complete, list(OHLCV_COLUMNS)]
 
 
 def _as_float_series(values: pd.Series | Iterable[float], *, name: str) -> pd.Series:
