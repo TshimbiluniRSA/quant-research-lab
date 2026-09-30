@@ -53,7 +53,8 @@ repository. Status: **declared; pending coverage and quality verification** afte
 Jesse imports candles through the present, so final-test and reserved candles will exist in the
 local database after import. Storage is not access: do not select, chart, or query those ranges.
 
-Coverage: Binance has 22 gaps (4,111 minutes, all in research) listed in
+Coverage: Binance has 22 gaps (4,111 minutes) and 3 halts published as zero-volume candles
+(226 minutes), all in research, listed in
 [`data/metadata/binance_spot_btcusdt_1m_gaps.md`](../data/metadata/binance_spot_btcusdt_1m_gaps.md).
 `scripts/import_candles.py` fills them with synthetic flat candles; check that list before
 trusting a result whose range spans a gap. Quality checks beyond timestamp coverage are pending.

@@ -183,7 +183,7 @@ Verified against the repository on 2026-09-28. Update this section when the fact
   researcher.
 - **Candle import**: `make import-candles START=YYYY-MM-DD` runs `scripts/import_candles.py`
   in the Jesse container. It fills Binance outages flat at the previous close instead of
-  stopping or using the reopening price; the 22 filled gaps are listed in
+  stopping or using the reopening price; the 22 filled gaps and 3 zero-volume halts are listed in
   `data/metadata/binance_spot_btcusdt_1m_gaps.md`.
 - **Known gaps**: slippage is **not modeled**. Address it before trusting any result on
   less-liquid instruments. No CI is configured (`make check` is local only). Equity data (e.g.

@@ -5,6 +5,11 @@ candle. Most are exchange maintenance or trading halts. `scripts/import_candles.
 missing minute in Jesse's database with a synthetic, zero-volume candle flat at the last real
 close before the gap. **Filled candles are not market data.**
 
+A second table lists halts where Binance stopped trading but kept publishing flat, zero-volume
+candles before it stopped publishing entirely. Those minutes come from Binance, not Jesse, but
+nobody could trade in them, so they are treated like the gaps: notebooks remove every minute in
+both tables (`analytics.load_gap_windows` reads both).
+
 ## How this list was produced
 
 - Scanned 2026-09-29, covering 2019-01-01 00:00 to 2026-09-28 23:59 UTC.
@@ -13,6 +18,11 @@ close before the gap. **Filled candles are not market data.**
   access, and is not recorded in the final-test access log.
 - Times are UTC. "First missing" and "last missing" are the open times of the first and last
   absent 1m candles, inclusive.
+- Halts were found on 2026-09-29 after the full import, by grouping the research period's flat
+  (open = high = low = close) zero-volume minutes into consecutive runs and keeping only runs
+  that end exactly where a documented gap begins. Outside research, the database was only
+  asked for the count of such minutes per split (zero in validation, final test, and reserved);
+  no prices, returns, or timestamps from those splits were shown.
 
 ## Gaps
 
@@ -43,6 +53,25 @@ close before the gap. **Filled candles are not market data.**
 
 Totals: 22 gaps, 4,111 minutes (about 68.5 hours), all in the research split. No gaps in
 validation, final test, or reserved data up to 2026-09-28 23:59.
+
+## Halts published as zero-volume candles
+
+Binance returned these minutes, but each is flat with zero volume and runs straight into the
+documented gap that follows it: trading had already stopped. Row numbers continue from the gap
+table so every window has one ID.
+
+| # | Split | First missing | Last missing | Minutes |
+| ---: | --- | --- | --- | ---: |
+| 23 | Research | 2019-06-07 20:01 | 2019-06-07 21:13 | 73 |
+| 24 | Research | 2021-02-11 02:20 | 2021-02-11 03:40 | 81 |
+| 25 | Research | 2023-03-24 11:28 | 2023-03-24 12:39 | 72 |
+
+Here "missing" means "no trading", for consistency with the gap table's columns. Totals: 3
+halts, 226 minutes. Together with the gaps, notebooks remove 25 windows, 4,337 minutes.
+
+Not listed: a 3-minute flat zero-volume run at 2019-11-13 04:21–04:23 follows a traded minute
+after gap 5, so it is treated as real quiet trading. Jesse backtests still use every minute in
+both tables; check them before trusting a result whose range spans one.
 
 ## Research implications
 

@@ -180,12 +180,12 @@ def test_clean_ohlcv_requires_all_price_and_volume_columns() -> None:
 def test_load_gap_windows_reads_the_documented_binance_gaps() -> None:
     windows = load_gap_windows(GAPS_FILE)
 
-    assert len(windows) == 22
+    assert len(windows) == 25  # 22 gaps plus 3 halts published as zero-volume candles
     assert windows[0] == (
         pd.Timestamp("2019-03-12 02:00", tz="UTC"),
         pd.Timestamp("2019-03-12 07:59", tz="UTC"),
     )
-    assert sum((last - first) // pd.Timedelta(minutes=1) + 1 for first, last in windows) == 4111
+    assert sum((last - first) // pd.Timedelta(minutes=1) + 1 for first, last in windows) == 4337
 
 
 def test_load_gap_windows_rejects_a_row_whose_minutes_do_not_match(tmp_path: Path) -> None:

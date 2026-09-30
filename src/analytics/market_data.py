@@ -82,7 +82,7 @@ def load_gap_windows(path: str | Path) -> list[tuple[pd.Timestamp, pd.Timestamp]
 def drop_synthetic_minutes(
     candles: pd.DataFrame, gaps: Iterable[tuple[pd.Timestamp, pd.Timestamp]]
 ) -> pd.DataFrame:
-    """Remove 1m candles whose open time falls inside a documented exchange gap.
+    """Remove 1m candles whose open time falls inside a documented exchange gap or halt.
 
     Jesse fills exchange outages with flat, zero-volume candles, so data loaded from Jesse has
     no missing timestamps and gap-aware functions cannot see the outage. Removing those minutes
