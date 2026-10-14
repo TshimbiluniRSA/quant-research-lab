@@ -38,7 +38,8 @@ first; do not build tooling for them until then.
 These extend the core rules above with where and when each obligation applies.
 
 1. **Falsifiability first** (extends rule 2). Write the hypothesis in `research/hypotheses/`
-   *before* any data is touched. "Let's see what the data shows" is not a hypothesis.
+   *before* any data is touched (except setup counts in the research period; see the hypothesis
+   template). "Let's see what the data shows" is not a hypothesis.
 2. **Split before analysis** (extends rules 1 and 9). Assign research/validation/final-test
    boundaries per `research/DATA_SPLITTING.md` before analysis begins. Once a strategy has been
    evaluated on final-test data it is **contaminated** for that version. No "just one more tweak."
@@ -98,7 +99,8 @@ one complete; only the researcher can say an exit criterion has been met.
 
 - Pick one specific, falsifiable idea (e.g. "returns show short-term mean reversion after a 2%+
   single-candle move on 1h BTC-USDT").
-- Fill out `research/hypotheses/HYPOTHESIS_TEMPLATE.md` before touching data.
+- Fill out `research/hypotheses/HYPOTHESIS_TEMPLATE.md` before touching data (except setup
+  counts in the research period; see the hypothesis template).
 - Assign research/validation/final-test boundaries upfront, per `research/DATA_SPLITTING.md`.
 - Declare a strategy family, a primary market, and confirmation markets before any data is
   examined.
@@ -216,9 +218,15 @@ Verified against the repository on 2026-10-14. Update this section when the fact
   larger bars), covered by 25 tests in `tests/test_market_data.py`. Scripts have 5 tests in
   `tests/test_import_candles.py` and 17 in `tests/test_scan_gaps.py`. `simple_returns`,
   `log_returns`, and `forward_returns` require `freq` for timestamped series and measure
-  horizons in time: a missing candle yields NaN rather than a return spanning the gap. `src/features`, `src/risk`, `src/utils`, and
-  `src/validation` are empty placeholders. `make check` (ruff, mypy, pytest) passes locally.
-- **Templates**: `research/hypotheses/HYPOTHESIS_TEMPLATE.md`,
+  horizons in time: a missing candle yields NaN rather than a return spanning the gap.
+  `src/features`, `src/risk`, `src/utils`, and `src/validation` are empty placeholders.
+  `make check` (ruff, mypy, pytest) passes locally.
+- **Templates**: `research/hypotheses/HYPOTHESIS_TEMPLATE.md` (filled in and committed before
+  any data is examined: strategy family, direction, primary market and timeframe, confirmation
+  markets, split version and date ranges, per-market costs and a cost stress level, placebo
+  design, minimum sample size, planned variants, decision criteria for validated /
+  market-specific / rejected, and known biases; the only data access allowed beforehand is
+  counting setups in the research period, recorded under "Data access before testing"),
   `research/experiments/EXPERIMENT_TEMPLATE.md` (multi-run research experiment),
   `research/experiments/TEMPLATE.md` (single backtest run record, Stage 1–2), and
   `research/reports/REPORT_TEMPLATE.md`.
