@@ -28,13 +28,13 @@ automated campaign.
 
 ## Crypto boundaries (v2)
 
-Proposed 2026-10-14 to extend v1 from BTC-USDT to every Binance Spot crypto pair. Status:
-**proposed; not yet adopted by the researcher.** The calendar boundaries are unchanged from v1.
-Only the dataset scope and the seal scope change.
+Proposed and adopted by the researcher on 2026-10-14 to extend v1 from BTC-USDT to every
+Binance Spot crypto pair. Status: **adopted 2026-10-14.** The calendar boundaries are unchanged
+from v1. Only the dataset scope and the seal scope change.
 
-- Split definition version: **v2** (proposed 2026-10-14; supersedes [v1](#v1-btc-usdt-boundaries-superseded)
-  once adopted). Any change to the boundaries, seal scope, or candle-assignment rule creates a
-  new version.
+- Split definition version: **v2** (adopted 2026-10-14; supersedes
+  [v1](#v1-btc-usdt-boundaries-superseded)). Any change to the boundaries, seal scope, or
+  candle-assignment rule creates a new version.
 - Dataset scope: **every Binance Spot crypto pair** declared in the
   [pair table](#declared-pairs). A pair is not research data until it is declared there.
 - Seal scope: the final-test and reserved periods apply to **all crypto assets on any exchange
@@ -67,9 +67,9 @@ The researcher declares pairs here before importing or analysing them. A pair li
 | BTC-USDT | 2026-09-28 (v1) | before 2019-01-01 | 100% | [`binance_spot_btcusdt_1m_gaps.md`](../data/metadata/binance_spot_btcusdt_1m_gaps.md) | Timestamps verified 2026-09-29; quality checks pending |
 
 Each pair needs its own gap file, `data/metadata/binance_spot_<base><quote>_1m_gaps.md`, from a
-timestamp-only scan of that pair, before its data is used. Binance outages are mostly
-exchange-wide, but edges can differ by a minute between pairs, and listings, delistings and
-symbol reuse are pair-specific.
+timestamp-only scan of that pair (`scripts/scan_gaps.py`), before its data is used. Binance
+outages are mostly exchange-wide, but edges can differ by a minute between pairs, and listings,
+delistings and symbol reuse are pair-specific.
 
 ### Pair-selection hazards
 
@@ -84,8 +84,8 @@ symbol reuse are pair-specific.
 
 ## v1: BTC-USDT boundaries (superseded)
 
-Superseded by [v2](#crypto-boundaries-v2) once v2 is adopted. Kept for the record: run records
-made before adoption used v1. v2 keeps every v1 boundary, so v1 research and validation
+Superseded by [v2](#crypto-boundaries-v2) on 2026-10-14. Kept for the record: run records
+made before that date used v1. v2 keeps every v1 boundary, so v1 research and validation
 results remain valid.
 
 Declared by the researcher on 2026-09-28, before any BTC-USDT backtest or analysis in this

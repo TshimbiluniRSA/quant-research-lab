@@ -196,8 +196,9 @@ Do not add or enable live-trading logic by default. Any future live deployment m
 
 Verified against the repository on 2026-10-14. Update this section when the facts change.
 
-- **Research market**: crypto only (Binance Spot BTC-USDT via Jesse). No forex, futures, CFD,
-  or equity data source or execution platform has been chosen.
+- **Research market**: crypto only (Binance Spot via Jesse). BTC-USDT is the only declared and
+  imported pair. No forex, futures, CFD, or equity data source or execution platform has been
+  chosen.
 - **Strategies** (`strategies/`): four long-only, unoptimized learning examples:
   `BuyAndHoldBaseline`, `MovingAverageCrossover` (SMA 20/50), `RsiMeanReversion`
   (RSI 14, 30/50), `SimpleBreakout` (20-bar high / 10-bar low). Only `BuyAndHoldBaseline` and
@@ -210,12 +211,12 @@ Verified against the repository on 2026-10-14. Update this section when the fact
   `drop_synthetic_minutes`. `001_first_market_hypothesis.ipynb` is a TODO skeleton for an AAPL
   hourly-continuation question whose data provider is unconfirmed.
 - **Source and tests**: only `src/analytics/market_data.py` is implemented (OHLCV cleaning,
-  simple/log/forward returns, rolling volatility, plus `load_gap_windows`,
+  simple/log/forward returns, rolling volatility, plus `gap_file_path`, `load_gap_windows`,
   `drop_synthetic_minutes`, and `resample_ohlcv` for removing outage minutes before building
-  larger bars), covered by 21 tests in `tests/test_market_data.py` (plus 2 in
-  `tests/test_import_candles.py`). `simple_returns`, `log_returns`, and `forward_returns`
-  require `freq` for timestamped series and measure horizons in time: a missing candle yields
-  NaN rather than a return spanning the gap. `src/features`, `src/risk`, `src/utils`, and
+  larger bars), covered by 25 tests in `tests/test_market_data.py`. Scripts have 5 tests in
+  `tests/test_import_candles.py` and 17 in `tests/test_scan_gaps.py`. `simple_returns`,
+  `log_returns`, and `forward_returns` require `freq` for timestamped series and measure
+  horizons in time: a missing candle yields NaN rather than a return spanning the gap. `src/features`, `src/risk`, `src/utils`, and
   `src/validation` are empty placeholders. `make check` (ruff, mypy, pytest) passes locally.
 - **Templates**: `research/hypotheses/HYPOTHESIS_TEMPLATE.md`,
   `research/experiments/EXPERIMENT_TEMPLATE.md` (multi-run research experiment),
@@ -229,20 +230,25 @@ Verified against the repository on 2026-10-14. Update this section when the fact
   review of an external strategy, not a result). Markdown run records in
   `research/experiments/` are tracked by Git; other files there and
   `research/experiments/generated/` are ignored.
-- **Data split**: BTC-USDT boundaries declared in `research/DATA_SPLITTING.md` (Binance Spot;
-  half-open UTC intervals): research [2019-01-01, 2024-01-01), validation [2024-01-01,
-  2025-01-01), final test [2025-01-01, 2026-07-01) sealed for BTC on any exchange, 2026-07-01
-  onward reserved. One split shared by all BTC-USDT hypotheses; the final-test access log is
-  empty (never opened). No candles have been committed or checked into `data/`.
+- **Data split**: split definition **v2**, adopted 2026-10-14, in `research/DATA_SPLITTING.md`
+  (v1, BTC-USDT only, is kept as superseded). Same boundaries for every declared Binance Spot
+  pair, half-open UTC intervals: research [2019-01-01, 2024-01-01), validation [2024-01-01,
+  2025-01-01), final test [2025-01-01, 2026-07-01) sealed for **all crypto** on any exchange,
+  2026-07-01 onward reserved. One split shared by all crypto hypotheses; the final-test access
+  log is empty (never opened). Only BTC-USDT is declared in the pair table. No candles have
+  been committed or checked into `data/`.
 - **Roadmap progress**: Stage 1 in progress. Both run records' hand calculations match Jesse,
   but the researcher has not signed off the exit criterion. No stage has been signed off. The
   roadmap now has 10 stages (Portfolio, Live, and Prop-firm added as 7–9; ML/LLM moved to 10).
-- **Candle import**: `make import-candles START=YYYY-MM-DD` runs `scripts/import_candles.py`
-  in the Jesse container. It fills Binance outages flat at the previous close instead of
-  stopping or using the reopening price; the 22 filled gaps and 3 zero-volume halts are listed in
+- **Candle import**: `make import-candles START=YYYY-MM-DD [SYMBOL=ETH-USDT]` runs
+  `scripts/import_candles.py` in the Jesse container (default BTC-USDT). It fills Binance
+  outages flat at the previous close instead of stopping or using the reopening price; the 22
+  filled gaps and 3 zero-volume halts are listed in
   `data/metadata/binance_spot_btcusdt_1m_gaps.md`. Jesse's Postgres database holds Binance Spot
   BTC-USDT 1m candles from 2018-12-14 00:00 to 2026-09-29 10:21 UTC with no missing minutes
-  (imported 2026-09-29).
+  (imported 2026-09-29). Each new pair needs its own gap file from `scripts/scan_gaps.py`
+  (timestamps only, run on the host). A rerun for BTC-USDT's research period on 2026-10-14
+  reproduced the documented 25 windows exactly, in about 50 minutes.
 - **Known gaps**: slippage is **not modeled**. Address it before trusting any result on
   less-liquid instruments. No CI is configured (`make check` is local only). Equity data (e.g.
   AAPL) is intentionally not integrated; do not substitute crypto data for it.
