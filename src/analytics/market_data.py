@@ -9,6 +9,10 @@ import pandas as pd
 
 OHLCV_COLUMNS = ("open", "high", "low", "close", "volume")
 ONE_MINUTE = pd.Timedelta(minutes=1)
+METADATA_DIR = Path(__file__).resolve().parents[2] / "data" / "metadata"
+
+# The title line of a gap file names the exchange and pair: "# Binance Spot BTC-USDT 1m gaps"
+_GAP_TITLE = re.compile(r"^#\s+(.+?)\s+1m gaps\s*$")
 
 # A data row of the gap table in data/metadata/*_1m_gaps.md:
 # | # | Split | First missing | Last missing | Minutes |
@@ -57,14 +61,31 @@ def clean_ohlcv(
     return cleaned.loc[:, list(OHLCV_COLUMNS)]
 
 
-def load_gap_windows(path: str | Path) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
+def gap_file_path(symbol: str, metadata_dir: str | Path = METADATA_DIR) -> Path:
+    """Return the gap file for a Binance Spot pair, e.g. ``ETH-USDT`` ->
+    ``binance_spot_ethusdt_1m_gaps.md``."""
+    return Path(metadata_dir) / f"binance_spot_{symbol.replace('-', '').lower()}_1m_gaps.md"
+
+
+def load_gap_windows(
+    path: str | Path, *, symbol: str | None = None
+) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
     """Read ``(first_missing, last_missing)`` UTC minutes from a documented 1m gap table.
 
     Each row's minute count must equal its inclusive window length, so a typo in the source of
     truth fails loudly instead of silently keeping or dropping the wrong minutes.
+
+    Pass ``symbol`` to check that the file's title names that Binance Spot pair. Outages are
+    mostly exchange-wide, so one pair's file looks plausible for another, but window edges can
+    differ by a minute and listings and delistings are pair-specific.
     """
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    if symbol is not None:
+        titles = [m.group(1) for m in map(_GAP_TITLE.match, lines) if m is not None]
+        if titles != [f"Binance Spot {symbol}"]:
+            raise ValueError(f"{path} is not the Binance Spot {symbol} gap file.")
     windows = []
-    for line in Path(path).read_text(encoding="utf-8").splitlines():
+    for line in lines:
         match = _GAP_ROW.match(line.strip())
         if match is None:
             continue

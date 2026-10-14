@@ -2,6 +2,21 @@
 
 This repository is a quantitative research laboratory. Agents must prioritize research integrity, reproducibility, and capital preservation over impressive backtests.
 
+## Project direction
+
+The lab's goal is to understand strategy research end to end:
+
+1. learn the fundamentals;
+2. validate strategies across several markets;
+3. combine validated strategies into a portfolio;
+4. trade live at small size to measure the gap between backtest and reality;
+5. apply proprietary-firm rules as a constraint simulation.
+
+Strategies should be market-agnostic in idea; costs, contract specs and execution are
+per-market configuration. Crypto (Binance via Jesse) is the current research market. Forex,
+futures and CFDs are future markets and need a data source and execution platform chosen
+first; do not build tooling for them until then.
+
 ## Core rules
 
 1. Never optimize against the final test dataset.
@@ -23,7 +38,8 @@ This repository is a quantitative research laboratory. Agents must prioritize re
 These extend the core rules above with where and when each obligation applies.
 
 1. **Falsifiability first** (extends rule 2). Write the hypothesis in `research/hypotheses/`
-   *before* any data is touched. "Let's see what the data shows" is not a hypothesis.
+   *before* any data is touched (except setup counts in the research period; see the hypothesis
+   template). "Let's see what the data shows" is not a hypothesis.
 2. **Split before analysis** (extends rules 1 and 9). Assign research/validation/final-test
    boundaries per `research/DATA_SPLITTING.md` before analysis begins. Once a strategy has been
    evaluated on final-test data it is **contaminated** for that version. No "just one more tweak."
@@ -83,13 +99,21 @@ one complete; only the researcher can say an exit criterion has been met.
 
 - Pick one specific, falsifiable idea (e.g. "returns show short-term mean reversion after a 2%+
   single-candle move on 1h BTC-USDT").
-- Fill out `research/hypotheses/HYPOTHESIS_TEMPLATE.md` before touching data.
+- Fill out `research/hypotheses/HYPOTHESIS_TEMPLATE.md` before touching data (except setup
+  counts in the research period; see the hypothesis template).
 - Assign research/validation/final-test boundaries upfront, per `research/DATA_SPLITTING.md`.
+- Declare a strategy family, a primary market, and confirmation markets before any data is
+  examined.
 
 ### Stage 5 — Test it, cost-adjusted, and write the conclusion
 
 - Backtest on research/training data only.
+- Test on the primary market first, then unchanged (same rules and parameters) on the declared
+  confirmation markets.
+- Include a placebo test: random entries with the same trade count and holding period.
+- Include a cost stress test.
 - Check against validation data.
+- A result on the primary market only is labelled **market-specific, not validated**.
 - Write the report in `research/reports/` even if the result is null.
 - **A documented null result is progress. An untested guess is not.**
 
@@ -98,7 +122,22 @@ one complete; only the researcher can say an exit criterion has been met.
 - Only after a validated edge exists: sizing (Kelly-adjacent), drawdown tolerance, correlation
   handling across strategies.
 
-### Stage 7 (future, gated) — ML / LLM exploration
+### Stage 7 (future, gated) — Portfolio
+
+- Combine validated strategies into a portfolio.
+- Diversification claims require measured return correlations between the strategies.
+
+### Stage 8 (future, gated) — Live
+
+- Paper trading first, then live at minimum size.
+- **Deliverable:** a backtest-vs-live comparison report measuring the gap between the backtest
+  and reality.
+
+### Stage 9 (future, gated) — Prop-firm constraint simulation
+
+- Apply proprietary-firm rules as constraints in simulation.
+
+### Stage 10 (future, gated) — ML / LLM exploration
 
 - Only after at least one full Stage 1–5 cycle has been completed and documented. First question
   at this stage: "would a better feature or a better cost model solve this instead of a bigger
@@ -117,6 +156,13 @@ These apply to Claude Code and any other tool reading this file, in addition to 
 - Present no backtest result as meaningful without fees, and call out explicitly when slippage
   is not modeled.
 - Prefer explaining *why* a number is what it is over just producing the number.
+- Never select markets, timeframes, or variants after seeing results. Every tested variant
+  counts as a trial and must be recorded.
+- Family labels organize ideas; diversification claims require measured return correlations.
+- Do not create portfolio, live-trading, prop-firm, or multi-asset code until the roadmap stage
+  for it is reached and the researcher asks.
+- Every new strategy gets a row in `strategies/REGISTRY.md`. Its status changes only with a
+  linked run record or report.
 
 ## AI experiment campaigns
 
@@ -150,41 +196,67 @@ Do not add or enable live-trading logic by default. Any future live deployment m
 
 ## Current status
 
-Verified against the repository on 2026-09-28. Update this section when the facts change.
+Verified against the repository on 2026-10-14. Update this section when the facts change.
 
+- **Research market**: crypto only (Binance Spot via Jesse). BTC-USDT is the only declared and
+  imported pair. No forex, futures, CFD, or equity data source or execution platform has been
+  chosen.
 - **Strategies** (`strategies/`): four long-only, unoptimized learning examples:
   `BuyAndHoldBaseline`, `MovingAverageCrossover` (SMA 20/50), `RsiMeanReversion`
-  (RSI 14, 30/50), `SimpleBreakout` (20-bar high / 10-bar low). None has been backtested in a
-  recorded experiment.
+  (RSI 14, 30/50), `SimpleBreakout` (20-bar high / 10-bar low). Only `BuyAndHoldBaseline` and
+  `MovingAverageCrossover` have been run, as Stage 1 mechanics exercises (see Research records).
+  `strategies/REGISTRY.md` records each strategy's family and research status; all four are
+  Learning, so every family is "Not researched".
 - **Notebooks** (`research/notebooks/`): `000_jesse_data_basics.ipynb` is a complete starter
-  that has never been run (no outputs); it expects `data/raw/candles.csv`, which does not exist
-  yet. `001_first_market_hypothesis.ipynb` is a TODO skeleton for an AAPL hourly-continuation
-  question whose data provider is unconfirmed.
+  that has never been run (no outputs). It still reads `data/raw/candles.csv` (absent); an
+  alternative cell, left commented out, loads 1m candles from Jesse and applies
+  `drop_synthetic_minutes`. `001_first_market_hypothesis.ipynb` is a TODO skeleton for an AAPL
+  hourly-continuation question whose data provider is unconfirmed.
 - **Source and tests**: only `src/analytics/market_data.py` is implemented (OHLCV cleaning,
-  simple/log/forward returns, rolling volatility), covered by 14 tests in
-  `tests/test_market_data.py` (plus 2 in `tests/test_import_candles.py`). `simple_returns`, `log_returns`, and `forward_returns` require
-  `freq` for timestamped series and measure horizons in time: a missing candle yields NaN rather
-  than a return spanning the gap. `src/features`, `src/risk`, `src/utils`, and `src/validation` are
-  empty placeholders. `make check` (ruff, mypy, pytest) passes locally.
-- **Templates**: `research/hypotheses/HYPOTHESIS_TEMPLATE.md`,
+  simple/log/forward returns, rolling volatility, plus `gap_file_path`, `load_gap_windows`,
+  `drop_synthetic_minutes`, and `resample_ohlcv` for removing outage minutes before building
+  larger bars), covered by 25 tests in `tests/test_market_data.py`. Scripts have 5 tests in
+  `tests/test_import_candles.py` and 17 in `tests/test_scan_gaps.py`. `simple_returns`,
+  `log_returns`, and `forward_returns` require `freq` for timestamped series and measure
+  horizons in time: a missing candle yields NaN rather than a return spanning the gap.
+  `src/features`, `src/risk`, `src/utils`, and `src/validation` are empty placeholders.
+  `make check` (ruff, mypy, pytest) passes locally.
+- **Templates**: `research/hypotheses/HYPOTHESIS_TEMPLATE.md` (filled in and committed before
+  any data is examined: strategy family, direction, primary market and timeframe, confirmation
+  markets, split version and date ranges, per-market costs and a cost stress level, placebo
+  design, minimum sample size, planned variants, decision criteria for validated /
+  market-specific / rejected, and known biases; the only data access allowed beforehand is
+  counting setups in the research period, recorded under "Data access before testing"),
   `research/experiments/EXPERIMENT_TEMPLATE.md` (multi-run research experiment),
   `research/experiments/TEMPLATE.md` (single backtest run record, Stage 1–2), and
   `research/reports/REPORT_TEMPLATE.md`.
-- **Research records**: no hypotheses written, no experiments recorded, and one report
-  (`AAPL_HOURLY_ANCHOR_TREND_REVIEW.md`, a code review of an external strategy, not a result).
-  Markdown run records in `research/experiments/` are tracked by Git; other files there and
+- **Research records**: no hypotheses written. Two Stage 1 run records in
+  `research/experiments/`, both Binance Spot BTC-USDT 1h, 2019-01-21 to 2019-03-11 (research
+  split), fee 0.001, slippage not modeled, each with one hand-verified trade:
+  `2026-09-29_buy-and-hold-mechanics.md` and `2026-09-30_ma-crossover-mechanics.md`. They record
+  mechanics, not evidence of an edge. One report (`AAPL_HOURLY_ANCHOR_TREND_REVIEW.md`, a code
+  review of an external strategy, not a result). Markdown run records in
+  `research/experiments/` are tracked by Git; other files there and
   `research/experiments/generated/` are ignored.
-- **Data split**: BTC-USDT boundaries declared in `research/DATA_SPLITTING.md` (Binance Spot;
-  half-open UTC intervals): research [2019-01-01, 2024-01-01), validation [2024-01-01,
-  2025-01-01), final test [2025-01-01, 2026-07-01) sealed for BTC on any exchange, 2026-07-01
-  onward reserved. One split shared by all BTC-USDT hypotheses; the final-test access log is
-  empty (never opened). No candles have been committed or checked into `data/`.
-- **Roadmap progress**: Stage 1 not yet completed. No stage has been signed off by the
-  researcher.
-- **Candle import**: `make import-candles START=YYYY-MM-DD` runs `scripts/import_candles.py`
-  in the Jesse container. It fills Binance outages flat at the previous close instead of
-  stopping or using the reopening price; the 22 filled gaps and 3 zero-volume halts are listed in
-  `data/metadata/binance_spot_btcusdt_1m_gaps.md`.
+- **Data split**: split definition **v2**, adopted 2026-10-14, in `research/DATA_SPLITTING.md`
+  (v1, BTC-USDT only, is kept as superseded). Same boundaries for every declared Binance Spot
+  pair, half-open UTC intervals: research [2019-01-01, 2024-01-01), validation [2024-01-01,
+  2025-01-01), final test [2025-01-01, 2026-07-01) sealed for **all crypto** on any exchange,
+  2026-07-01 onward reserved. One split shared by all crypto hypotheses; the final-test access
+  log is empty (never opened). Only BTC-USDT is declared in the pair table. No candles have
+  been committed or checked into `data/`.
+- **Roadmap progress**: Stage 1 in progress. Both run records' hand calculations match Jesse,
+  but the researcher has not signed off the exit criterion. No stage has been signed off. The
+  roadmap now has 10 stages (Portfolio, Live, and Prop-firm added as 7–9; ML/LLM moved to 10).
+- **Candle import**: `make import-candles START=YYYY-MM-DD [SYMBOL=ETH-USDT]` runs
+  `scripts/import_candles.py` in the Jesse container (default BTC-USDT). It fills Binance
+  outages flat at the previous close instead of stopping or using the reopening price; the 22
+  filled gaps and 3 zero-volume halts are listed in
+  `data/metadata/binance_spot_btcusdt_1m_gaps.md`. Jesse's Postgres database holds Binance Spot
+  BTC-USDT 1m candles from 2018-12-14 00:00 to 2026-09-29 10:21 UTC with no missing minutes
+  (imported 2026-09-29). Each new pair needs its own gap file from `scripts/scan_gaps.py`
+  (timestamps only, run on the host). A rerun for BTC-USDT's research period on 2026-10-14
+  reproduced the documented 25 windows exactly, in about 50 minutes.
 - **Known gaps**: slippage is **not modeled**. Address it before trusting any result on
   less-liquid instruments. No CI is configured (`make check` is local only). Equity data (e.g.
   AAPL) is intentionally not integrated; do not substitute crypto data for it.
