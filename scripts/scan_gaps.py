@@ -54,7 +54,7 @@ def _ms(day: str) -> int:
     return int(datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=UTC).timestamp() * 1000)
 
 
-# Split definition v2 in research/DATA_SPLITTING.md: half-open UTC intervals [start, end).
+# Split definition v3 in research/DATA_SPLITTING.md: half-open UTC intervals [start, end).
 # tests/test_scan_gaps.py checks these against the document's table.
 SPLITS: tuple[tuple[str, int, int | None], ...] = (
     (RESEARCH, _ms("2019-01-01"), _ms("2024-01-01")),

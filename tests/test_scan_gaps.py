@@ -230,9 +230,9 @@ def test_render_refuses_an_empty_scan() -> None:
 
 def test_split_boundaries_match_data_splitting_md() -> None:
     text = (ROOT / "research/DATA_SPLITTING.md").read_text(encoding="utf-8")
-    v2 = text.split("## Crypto boundaries (v2)")[1].split("\n## ")[0]
+    current = text.split("## Crypto boundaries (v3)")[1].split("\n## ")[0]
     rows = re.findall(r"^\| (Research/training|Validation|Final test|Reserved) \| ([\d-]+) 00:00 \|"
-                      r" ([\d-]+ 00:00|open) \|", v2, re.M)
+                      r" ([\d-]+ 00:00|open) \|", current, re.M)
     documented = [(start, end.removesuffix(" 00:00")) for _, start, end in rows]
 
     in_script = [
