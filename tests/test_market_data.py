@@ -8,6 +8,7 @@ from analytics import (
     clean_ohlcv,
     drop_synthetic_minutes,
     forward_returns,
+    gap_file_path,
     load_gap_windows,
     log_returns,
     resample_ohlcv,
@@ -15,7 +16,7 @@ from analytics import (
     simple_returns,
 )
 
-GAPS_FILE = Path(__file__).resolve().parents[1] / "data/metadata/binance_spot_btcusdt_1m_gaps.md"
+GAPS_FILE = gap_file_path("BTC-USDT")
 
 
 def _window(first: str, last: str) -> tuple[pd.Timestamp, pd.Timestamp]:
@@ -194,6 +195,34 @@ def test_load_gap_windows_rejects_a_row_whose_minutes_do_not_match(tmp_path: Pat
 
     with pytest.raises(ValueError, match="does not span 359 minutes"):
         load_gap_windows(table)
+
+
+def test_gap_file_path_names_one_file_per_pair() -> None:
+    assert GAPS_FILE == (
+        Path(__file__).resolve().parents[1] / "data/metadata/binance_spot_btcusdt_1m_gaps.md"
+    )
+    assert gap_file_path("ETH-USDT", "meta") == Path("meta/binance_spot_ethusdt_1m_gaps.md")
+
+
+def test_load_gap_windows_accepts_the_matching_symbol() -> None:
+    assert load_gap_windows(GAPS_FILE, symbol="BTC-USDT") == load_gap_windows(GAPS_FILE)
+
+
+def test_load_gap_windows_rejects_another_pairs_file() -> None:
+    # Outages are mostly exchange-wide, so BTC's windows look plausible for ETH but are not
+    # ETH's record: edges can differ by a minute, and listings and delistings differ.
+    with pytest.raises(ValueError, match="not the Binance Spot ETH-USDT gap file"):
+        load_gap_windows(GAPS_FILE, symbol="ETH-USDT")
+
+
+def test_load_gap_windows_rejects_a_file_without_a_title_when_a_symbol_is_given(
+    tmp_path: Path,
+) -> None:
+    table = tmp_path / "gaps.md"
+    table.write_text("| 1 | Research | 2019-03-12 02:00 | 2019-03-12 07:59 | 360 |\n")
+
+    with pytest.raises(ValueError, match="not the Binance Spot BTC-USDT gap file"):
+        load_gap_windows(table, symbol="BTC-USDT")
 
 
 def test_drop_synthetic_minutes_uses_windows_not_zero_volume() -> None:

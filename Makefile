@@ -21,8 +21,8 @@ jesse-logs:
 	docker compose --env-file .env -f docker/docker-compose.yml logs -f jesse
 
 import-candles:
-	@test -n "$(START)" || (echo "Usage: make import-candles START=YYYY-MM-DD"; exit 1)
-	docker compose --env-file .env -f docker/docker-compose.yml exec jesse python scripts/import_candles.py --start $(START)
+	@test -n "$(START)" || (echo "Usage: make import-candles START=YYYY-MM-DD [SYMBOL=ETH-USDT]"; exit 1)
+	docker compose --env-file .env -f docker/docker-compose.yml exec jesse python scripts/import_candles.py --start $(START) --symbol $(or $(SYMBOL),BTC-USDT)
 
 backtest: jesse-up
 	@echo "Open http://localhost:9000, import candles, then use the Backtest page."
