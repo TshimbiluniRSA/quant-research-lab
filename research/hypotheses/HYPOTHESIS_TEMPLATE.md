@@ -3,9 +3,10 @@
 Status: Draft
 
 Fill in every section **before any data is examined**, and commit the filled template before
-the first backtest or analysis: the commit is the record that these choices came first. Once
-data has been seen, do not edit the classification, markets, costs, placebo, variants or
-decision criteria; write a new hypothesis version instead.
+the first backtest or analysis: the commit is the record that these choices came first. The one
+exception is counting how often a setup occurs, under the rules in "Data access before
+testing". Once data has been seen, do not edit the classification, markets, costs, placebo,
+variants or decision criteria; write a new hypothesis version instead.
 
 ## Classification
 
@@ -68,6 +69,36 @@ If slippage is not modeled, write "not modeled" in its column and treat the resu
 - Primary metric:
 - Secondary metrics:
 - Uncertainty/significance method:
+- Minimum sample size: (the number of trades or events needed before the result is
+  interpretable, and why)
+- Expected sample in the research period: (how often the setup occurs, from the count recorded
+  under "Data access before testing")
+
+If the research period cannot supply the minimum sample, say so here and treat the result as
+**exploratory**: it can suggest a hypothesis but cannot validate or reject one.
+
+## Data access before testing
+
+Counting how often a setup occurs in the research period is allowed, to check the minimum
+sample size. Nothing else may be looked at before testing.
+
+- **Counts only.** No returns, prices, charts, or anything about what happened after the setup.
+- **Research period only.** Never count in validation, final-test or reserved data.
+- **Event-based setups** (e.g. scheduled releases) are counted from the event calendar, not
+  from market data.
+- **Changes to the setup** made because of a count are recorded below with the original
+  definition, the change, and the reason. Repeated changes count as trials under "Variants and
+  trials".
+
+| Date (UTC) | What was counted | Date range | Script or query | Result |
+| --- | --- | --- | --- | --- |
+| | | | | |
+
+Setup definition changes:
+
+| Date (UTC) | Original definition | Changed to | Reason |
+| --- | --- | --- | --- |
+| | | | |
 
 ## Variants and trials
 
