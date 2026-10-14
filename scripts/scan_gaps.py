@@ -25,6 +25,7 @@ saving it: an unexpected gap (a listing break, a reused symbol) is a research de
 import argparse
 import http.client
 import json
+import re
 import sys
 import threading
 import time
@@ -48,10 +49,23 @@ PAGE_MINUTES = 1000
 WORKERS = 8
 METADATA_DIR = Path(__file__).resolve().parents[1] / "data" / "metadata"
 RESEARCH = "Research"
+# Halts are exchange-wide, so BTC-USDT's documented halts bound every other pair's. A quiet pair
+# can have untraded minutes just before a halt; without the cap they would join the halt.
+REFERENCE_SYMBOL = "BTC-USDT"
+HALT_HEADING = "## Halts published as zero-volume candles"
+_TABLE_ROW = re.compile(
+    r"^\|\s*\d+\s*\|[^|]*\|\s*(\d{4}-\d\d-\d\d \d\d:\d\d)\s*\|"
+    r"\s*(\d{4}-\d\d-\d\d \d\d:\d\d)\s*\|",
+    re.M,
+)
 
 
 def _ms(day: str) -> int:
     return int(datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=UTC).timestamp() * 1000)
+
+
+def _minute_ms(minute: str) -> int:
+    return int(datetime.strptime(minute, "%Y-%m-%d %H:%M").replace(tzinfo=UTC).timestamp() * 1000)
 
 
 # Split definition v3 in research/DATA_SPLITTING.md: half-open UTC intervals [start, end).
@@ -125,6 +139,36 @@ def scan(minutes: Iterable[Minute]) -> Scan:
     if run is not None:
         result.research_flat_runs.append((run[0], run[1]))
     return result
+
+
+def load_reference_halts(path: Path) -> list[Window]:
+    """Read the halt table (not the gap table) of a gap file."""
+    text = path.read_text(encoding="utf-8")
+    if HALT_HEADING not in text:
+        raise ValueError(f"{path} has no halt table")
+    section = text.split(HALT_HEADING, 1)[1].split("\n## ", 1)[0]
+    return [(_minute_ms(a), _minute_ms(b)) for a, b in _TABLE_ROW.findall(section)]
+
+
+def cap_halts(halts: list[Window], reference: list[Window]) -> tuple[list[Window], list[str]]:
+    """Move each halt's start no earlier than the start of the reference halt it overlaps.
+
+    Return the capped halts and one message per change. A halt starting at or after the
+    reference start, or overlapping no reference halt, is left unchanged.
+    """
+    capped, messages = [], []
+    for first, last in halts:
+        for ref_first, ref_last in reference:
+            if first < ref_first <= last and first <= ref_last:
+                messages.append(
+                    f"halt {_fmt(first)} to {_fmt(last)}: start capped at {_fmt(ref_first)}, "
+                    f"the {REFERENCE_SYMBOL} halt start; {(ref_first - first) // MINUTE_MS} "
+                    "earlier untraded minutes are kept as quiet trading"
+                )
+                first = ref_first
+                break
+        capped.append((first, last))
+    return capped, messages
 
 
 Fetch = Callable[[int, int], list[list]]
@@ -256,14 +300,26 @@ def _rows(windows: list[Window], start_number: int) -> list[str]:
     ]
 
 
-def render(symbol: str, result: Scan, start: int, end: int, scanned_on: str) -> str:
-    """Return the gap file in the format analytics.load_gap_windows reads."""
+def render(
+    symbol: str,
+    result: Scan,
+    start: int,
+    end: int,
+    scanned_on: str,
+    halts: list[Window] | None = None,
+    cap_messages: Iterable[str] = (),
+) -> str:
+    """Return the gap file in the format analytics.load_gap_windows reads.
+
+    ``halts`` replaces ``result.halts()`` when given, e.g. after ``cap_halts``.
+    """
     if result.first is None or result.last is None:
         raise ValueError(
             f"Binance returned no {symbol} candles between {_fmt(start)} and {_fmt(end)}"
         )
-    gaps, halts = result.gaps, result.halts()
-    unlisted = [run for run in result.research_flat_runs if run not in halts]
+    gaps, detected = result.gaps, result.halts()
+    halts = detected if halts is None else halts
+    unlisted = [run for run in result.research_flat_runs if run not in detected]
     limit = MAX_FILLED_OUTAGE_MINUTES
     long_gaps = [n for n, gap in enumerate(gaps, start=1) if _minutes(gap) > limit]
     counts = result.flat_counts_outside_research
@@ -318,6 +374,8 @@ def render(symbol: str, result: Scan, start: int, end: int, scanned_on: str) -> 
         "",
         f"Totals: {len(halts)} halts, {sum(map(_minutes, halts)):,} minutes.",
         "",
+        *[f"Capped: {message}." for message in cap_messages],
+        *([""] if cap_messages else []),
         "Not listed: research flat zero-volume runs that do not end at a gap, treated as real",
         f"quiet trading: {len(unlisted)} runs, {sum(map(_minutes, unlisted)):,} minutes.",
         f"Outside research, flat zero-volume minutes (counts only): {outside}.",
@@ -342,7 +400,13 @@ def main() -> None:
 
     print(f"Scanning {args.symbol} from {args.start} (timestamps only)...", file=sys.stderr)
     result = scan(iter_minutes(binance_fetch(args.symbol), start, end))
-    text = render(args.symbol, result, start, end, scanned_on=today)
+    halts, messages = result.halts(), []
+    if args.symbol != REFERENCE_SYMBOL:
+        reference = load_reference_halts(METADATA_DIR / gap_file_name(REFERENCE_SYMBOL))
+        halts, messages = cap_halts(halts, reference)
+    for message in messages:
+        print(f"  {message}", file=sys.stderr)
+    text = render(args.symbol, result, start, end, today, halts, messages)
     if args.write:
         target.write_text(text, encoding="utf-8")
         print(f"Wrote {target}", file=sys.stderr)

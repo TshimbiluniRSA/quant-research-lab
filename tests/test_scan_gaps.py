@@ -240,3 +240,62 @@ def test_split_boundaries_match_data_splitting_md() -> None:
         for _, start, end in scan_gaps.SPLITS
     ]
     assert documented == in_script
+
+
+def test_reference_halts_are_read_from_the_btc_halt_table_only() -> None:
+    halts = scan_gaps.load_reference_halts(ROOT / "data/metadata/binance_spot_btcusdt_1m_gaps.md")
+
+    assert halts == [
+        (_ms("2019-06-07 20:01"), _ms("2019-06-07 21:13")),
+        (_ms("2021-02-11 02:20"), _ms("2021-02-11 03:40")),
+        (_ms("2023-03-24 11:28"), _ms("2023-03-24 12:39")),
+    ]
+
+
+def test_a_halt_starting_before_the_btc_halt_is_capped_at_the_btc_start() -> None:
+    reference = [(_ms("2021-02-11 02:20"), _ms("2021-02-11 03:40"))]
+    quiet_then_halted = [(_ms("2021-02-11 02:05"), _ms("2021-02-11 03:40"))]
+
+    capped, messages = scan_gaps.cap_halts(quiet_then_halted, reference)
+
+    assert capped == [(_ms("2021-02-11 02:20"), _ms("2021-02-11 03:40"))]
+    assert messages == [
+        "halt 2021-02-11 02:05 to 2021-02-11 03:40: start capped at 2021-02-11 02:20, the "
+        "BTC-USDT halt start; 15 earlier untraded minutes are kept as quiet trading"
+    ]
+
+
+def test_halts_starting_at_or_after_the_btc_start_or_unrelated_are_unchanged() -> None:
+    reference = [(_ms("2021-02-11 02:20"), _ms("2021-02-11 03:40"))]
+    halts = [
+        (_ms("2021-02-11 02:20"), _ms("2021-02-11 03:40")),  # same start
+        (_ms("2021-02-11 02:30"), _ms("2021-02-11 03:40")),  # pair traded into the halt
+        (_ms("2022-01-01 00:00"), _ms("2022-01-01 00:30")),  # pair-specific, no BTC halt
+    ]
+
+    assert scan_gaps.cap_halts(halts, reference) == (halts, [])
+
+
+def test_rendered_file_lists_the_capped_halt_and_the_reason(tmp_path: Path) -> None:
+    klines = (
+        _minutes("2021-02-11 02:04", 1)
+        + _minutes("2021-02-11 02:05", 15, flat=True)  # quiet before the halt
+        + _minutes("2021-02-11 02:20", 81, flat=True)  # the exchange-wide halt
+        + _minutes("2021-02-11 05:00", 1)  # gap 03:41-04:59
+    )
+    result = _scan(klines)
+    reference = [(_ms("2021-02-11 02:20"), _ms("2021-02-11 03:40"))]
+    halts, messages = scan_gaps.cap_halts(result.halts(), reference)
+    path = tmp_path / "gaps.md"
+
+    path.write_text(
+        scan_gaps.render(
+            "PAXG-USDT", result, _ms("2021-02-11"), _ms("2021-02-12"), "2026-10-14", halts, messages
+        )
+    )
+
+    assert load_gap_windows(path, symbol="PAXG-USDT")[-1] == (
+        pd.Timestamp("2021-02-11 02:20", tz="UTC"),
+        pd.Timestamp("2021-02-11 03:40", tz="UTC"),
+    )
+    assert "Capped: halt 2021-02-11 02:05 to 2021-02-11 03:40" in path.read_text()
