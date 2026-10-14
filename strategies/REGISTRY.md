@@ -10,21 +10,30 @@ record (`research/experiments/`) or report (`research/reports/`) that justifies 
 
 ## Family coverage
 
-A family is **covered** when at least one strategy in it has a status other than Learning.
-Learning examples teach mechanics and say nothing about whether a family works.
+Each family has one of three coverage values, judged from its strategies' statuses:
+
+| Coverage | Rule |
+| --- | --- |
+| Not researched | No strategy in the family is Rejected, Validated or Market-specific. Learning, Hypothesis and Testing strategies do not count: nothing has been concluded yet. |
+| Researched, nothing survived | Every concluded strategy in the family is Rejected. |
+| Covered | At least one strategy in the family is Validated or Market-specific. |
+
+Learning examples teach mechanics and say nothing about whether a family works. "Covered" by a
+Market-specific strategy means it worked on one market only; check the strategy's status before
+treating the family as validated.
 
 | Family | Coverage | Strategies in family |
 | --- | --- | --- |
-| Trend following | Not covered | `MovingAverageCrossover` (Learning) |
-| Mean reversion | Not covered | `RsiMeanReversion` (Learning) |
-| Breakout | Not covered | `SimpleBreakout` (Learning) |
-| Session breakout | Not covered | none |
-| Opening momentum | Not covered | none |
-| Carry | Not covered | none |
-| Seasonality | Not covered | none |
-| Pairs / relative value | Not covered | none |
-| Event / news | Not covered | none |
-| Volatility | Not covered | none |
+| Trend following | Not researched | `MovingAverageCrossover` (Learning) |
+| Mean reversion | Not researched | `RsiMeanReversion` (Learning) |
+| Breakout | Not researched | `SimpleBreakout` (Learning) |
+| Session breakout | Not researched | none |
+| Opening momentum | Not researched | none |
+| Carry | Not researched | none |
+| Seasonality | Not researched | none |
+| Pairs / relative value | Not researched | none |
+| Event / news | Not researched | none |
+| Volatility | Not researched | none |
 
 Family labels organize ideas. They are not evidence of diversification: two strategies in
 different families can still have highly correlated returns. Diversification claims require
