@@ -159,6 +159,8 @@ These apply to Claude Code and any other tool reading this file, in addition to 
 - Family labels organize ideas; diversification claims require measured return correlations.
 - Do not create portfolio, live-trading, prop-firm, or multi-asset code until the roadmap stage
   for it is reached and the researcher asks.
+- Every new strategy gets a row in `strategies/REGISTRY.md`. Its status changes only with a
+  linked run record or report.
 
 ## AI experiment campaigns
 
@@ -200,6 +202,8 @@ Verified against the repository on 2026-10-14. Update this section when the fact
   `BuyAndHoldBaseline`, `MovingAverageCrossover` (SMA 20/50), `RsiMeanReversion`
   (RSI 14, 30/50), `SimpleBreakout` (20-bar high / 10-bar low). Only `BuyAndHoldBaseline` and
   `MovingAverageCrossover` have been run, as Stage 1 mechanics exercises (see Research records).
+  `strategies/REGISTRY.md` records each strategy's family and research status; all four are
+  Learning, so no family is covered yet.
 - **Notebooks** (`research/notebooks/`): `000_jesse_data_basics.ipynb` is a complete starter
   that has never been run (no outputs). It still reads `data/raw/candles.csv` (absent); an
   alternative cell, left commented out, loads 1m candles from Jesse and applies
