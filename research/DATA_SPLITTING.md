@@ -74,9 +74,18 @@ must list this under "Known biases to note in the report", and the report must r
 The researcher declares pairs here before importing or analysing them. A pair listed after
 2019-01-01 has a shorter research period. Declare that before looking at its data, not after.
 
-| Pair | Declared (UTC) | First Binance 1m candle (UTC) | Research coverage | Gap file | Coverage status |
-| --- | --- | --- | --- | --- | --- |
-| BTC-USDT | 2026-09-28 (v1) | before 2019-01-01 | 100% | [`binance_spot_btcusdt_1m_gaps.md`](../data/metadata/binance_spot_btcusdt_1m_gaps.md) | Timestamps verified 2026-09-29; quality checks pending |
+| Pair | Declared (UTC) | First Binance 1m candle (UTC) | Research coverage | Underlying asset | Gap file | Coverage status | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| BTC-USDT | 2026-09-28 (v1) | before 2019-01-01 | 100% | — (crypto) | [`binance_spot_btcusdt_1m_gaps.md`](../data/metadata/binance_spot_btcusdt_1m_gaps.md) | Timestamps verified 2026-09-29; quality checks pending | |
+| ETH-USDT | 2026-10-14 (v3) | 2017-08-17 04:00 | 100% | — (crypto) | `binance_spot_ethusdt_1m_gaps.md` (scan pending) | Not imported | |
+| PAXG-USDT | 2026-10-14 (v3) | 2020-08-28 12:00 | 66.8% | Spot gold | `binance_spot_paxgusdt_1m_gaps.md` (scan pending) | Not imported | Low liquidity: 16–47% of sampled research-period minutes had no trades. Stale-price risk: a bar's close can be minutes old. Prefer 1h or longer timeframes. Results are optimistic while slippage is not modeled. |
+| EUR-USDT | 2026-10-14 (v3) | 2020-01-03 08:00 | 79.9% | EUR/USD | `binance_spot_eurusdt_1m_gaps.md` (scan pending) | Not imported | Low volatility relative to the 0.1% fee per order: every hypothesis must check the ratio of costs to typical price movement. |
+
+Research coverage is the share of the research period, [2019-01-01, 2024-01-01), after the
+pair's first Binance 1m candle, from Binance's public API on 2026-10-14 (timestamps only). The
+liquidity figures come from three sampled research-period months (2021-03, 2022-06, 2023-09),
+counts only. Jesse starts an import from the second weekly candle after listing, so its data
+begins a few days after the first candle shown here.
 
 Each pair needs its own gap file, `data/metadata/binance_spot_<base><quote>_1m_gaps.md`, from a
 timestamp-only scan of that pair (`scripts/scan_gaps.py`), before its data is used. Binance
